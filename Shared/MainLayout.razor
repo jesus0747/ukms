@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <span class="user-info">
+                        Hello, @context.User.Identity?.Name
+                        @if (context.User.IsInRole("SuperAdmin"))
+                        {
+                            <span class="badge badge-admin">SuperAdmin</span>
+                        }
+                    </span>
+                    <a href="MicrosoftIdentity/Account/SignOut" class="btn-signout">Sign out</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="MicrosoftIdentity/Account/SignIn" class="btn-signin">Sign in</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>

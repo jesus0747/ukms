@@ -1,0 +1,166 @@
+@page "/setup"
+@using Microsoft.AspNetCore.Authorization
+@using UniKeyManagement.Frontend.Services
+@using UniKeyManagement.Frontend.Models
+@attribute [Authorize(Policy = "RequireSuperAdmin")]
+@inject IApiClient ApiClient
+@inject NavigationManager Navigation
+@inject ILogger<Setup> Logger
+
+<PageTitle>Initial Setup - UniKey Management</PageTitle>
+
+<div class="setup-container">
+    <div class="setup-card">
+        <h1 class="setup-title">Initial System Setup</h1>
+        <p class="setup-subtitle">Configure your database connection to get started</p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-error">
+                <strong>Error:</strong> @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                <strong>Success:</strong> @successMessage
+            </div>
+        }
+
+        <div class="form-container">
+            <div class="form-group">
+                <label for="databaseType">Database Type</label>
+                <select id="databaseType" class="form-control" @bind="databaseType" disabled="@isSubmitting">
+                    <option value="">-- Select Database Type --</option>
+                    <option value="CosmosDB">Azure Cosmos DB</option>
+                    <option value="AzureSQL">Azure SQL Database</option>
+                </select>
+                <small class="form-text">Choose the database you want to use for this system</small>
+            </div>
+
+            <div class="form-group">
+                <label for="connectionString">Connection String</label>
+                <textarea id="connectionString"
+                          class="form-control"
+                          rows="4"
+                          placeholder="@GetConnectionStringPlaceholder()"
+                          @bind="connectionString"
+                          disabled="@isSubmitting"></textarea>
+                <small class="form-text">
+                    @if (databaseType == "CosmosDB")
+                    {
+                        <span>Get this from Azure Portal → Cosmos DB → Keys → Primary Connection String</span>
+                    }
+                    else if (databaseType == "AzureSQL")
+                    {
+                        <span>Get this from Azure Portal → SQL Database → Connection strings → ADO.NET</span>
+                    }
+                    else
+                    {
+                        <span>Select a database type first</span>
+                    }
+                </small>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-primary"
+                        @onclick="CompleteSetup"
+                        disabled="@(isSubmitting || string.IsNullOrWhiteSpace(databaseType) || string.IsNullOrWhiteSpace(connectionString))">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner"></span>
+                        <span>Setting up...</span>
+                    }
+                    else
+                    {
+                        <span>Complete Setup</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>Important Information</h3>
+            <ul>
+                <li>This setup can only be performed <strong>once</strong></li>
+                <li>Only <strong>SuperAdmin</strong> users can complete this setup</li>
+                <li>Connection string will be securely stored in Azure Key Vault</li>
+                <li>Make sure you have the required Azure resources created</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string databaseType = "";
+    private string connectionString = "";
+    private bool isSubmitting = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check if setup is already completed
+            var status = await ApiClient.GetSetupStatusAsync();
+            if (status?.IsSetupCompleted == true)
+            {
+                Navigation.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking setup status");
+        }
+    }
+
+    private string GetConnectionStringPlaceholder()
+    {
+        return databaseType switch
+        {
+            "CosmosDB" => "AccountEndpoint=https://your-account.documents.azure.com:443/;AccountKey=your-key;",
+            "AzureSQL" => "Server=tcp:your-server.database.windows.net,1433;Database=your-db;User ID=your-user;Password=your-password;",
+            _ => "Select a database type to see example format"
+        };
+    }
+
+    private async Task CompleteSetup()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isSubmitting = true;
+
+        try
+        {
+            var request = new CompleteSetupRequest
+            {
+                DatabaseType = databaseType,
+                ConnectionString = connectionString
+            };
+
+            var success = await ApiClient.CompleteSetupAsync(request);
+
+            if (success)
+            {
+                successMessage = "Setup completed successfully! Redirecting...";
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Failed to complete setup. Please check your connection string and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error completing setup");
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -1,0 +1,60 @@
+<div class="nav-menu">
+    <div class="nav-header">
+        <h3>UniKey Management</h3>
+    </div>
+
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="icon">🏠</span> Home
+            </NavLink>
+        </div>
+
+        <AuthorizeView Policy="RequireSuperAdmin">
+            <Authorized>
+                <div class="nav-section">
+                    <div class="nav-section-title">Administration</div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="setup">
+                            <span class="icon">⚙️</span> Setup
+                        </NavLink>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="RequireUser">
+            <Authorized>
+                <div class="nav-section">
+                    <div class="nav-section-title">Management</div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="keys" Match="NavLinkMatch.Prefix">
+                            <span class="icon">🔑</span> Keys
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="campuses" Match="NavLinkMatch.Prefix">
+                            <span class="icon">🏛️</span> Campuses
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="reports" Match="NavLinkMatch.Prefix">
+                            <span class="icon">📊</span> Reports
+                        </NavLink>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}
